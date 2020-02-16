@@ -12,7 +12,7 @@ function get_available_users() {
     }).then(function (data) {
         let html = '';
         $.each(data, function (index, object) {
-            html += '<li class="active"><div class="d-flex bd-highlight">' +
+            html += '<li><div class="d-flex bd-highlight">' +
                 '<div class="img_cont">' +
                 '<img class="rounded-circle user_img" src="'+object.avatar_url+'">'+
                 '<span class="online_icon offline"></span></div>' +
