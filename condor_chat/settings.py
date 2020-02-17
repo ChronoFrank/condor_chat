@@ -131,15 +131,19 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 SITE_URL = 'http://localhost:12000'
 
-
-# Extends the User profile with the Inbox model.
-AUTH_PROFILE_MODULE = 'chat.UserProfile'
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # Framework to handle api calls
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+            'rest_framework.authentication.SessionAuthentication',
+            'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_RENDERER_CLASS': [
+        'rest_framework.renderers.JSONRenderer',
+    ]
 }
 
 # configuration to handle jwt auth using rest-framework

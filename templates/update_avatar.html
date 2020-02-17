@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_heads %}
+    <head>
+        <link rel="stylesheet" type="text/css" href="{% static 'css/update_avatar.css' %}">
+    </head>
+ {% endblock %}
+{% block content %}
+    <main class="main_full">
+	<div class="container">
+		<div class="panel">
+			<form id="update_user_form" method="POST" action="." enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="uploaded_file_view show" id="uploaded_view">
+                    <img src="{{ update_profile_form.instance.avatar.url }}" />
+                </div>
+                {{ update_profile_form.as_p }}
+                <input class="btn ml-2 btn-warningr" type="SUBMIT" name="submit" value="Update"/>
+            </form>
+		</div>
+	</div>
+</main>
+
+{% endblock %}

@@ -13,11 +13,11 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework import parsers
 from .serializers import UserProfileSerializer, UserProfileAvatarSerializer
+from .forms import UserProfileForm
 
 
 class LoginLanding(View):
@@ -62,11 +62,29 @@ def index(request):
     return render(request, "index.html", {'site_url': settings.SITE_URL, 'media_url': settings.MEDIA_URL})
 
 
+@login_required
+def update_avatar(request):
+    user_profile = request.user.userprofile
+    if request.method == "POST":
+        print(request.POST)
+        update_profile_form = UserProfileForm(data=request.POST, instance=user_profile)
+        if update_profile_form.is_valid():
+            if 'avatar' in request.FILES:
+                user_profile.avatar = request.FILES['avatar']
+                user_profile.save()
+
+    else:
+        update_profile_form = UserProfileForm(instance=user_profile)
+
+    return render(request, 'update_avatar.html',
+                  {'update_profile_form': update_profile_form,
+                   'site_url': settings.SITE_URL, 'media_url': settings.MEDIA_URL})
+
+
 class UserProfileViewset(ModelViewSet):
     serializer_class = UserProfileSerializer
     queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, ]
 
     @action(detail=False, methods=['GET'])
     def get_available_users(self, request, *args, **kwargs):
