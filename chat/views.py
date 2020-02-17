@@ -16,6 +16,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
+from rest_framework import parsers
 from .serializers import UserProfileSerializer, UserProfileAvatarSerializer
 
 
@@ -77,3 +78,15 @@ class UserProfileViewset(ModelViewSet):
                                        | Q(last_name__icontains=full_name))
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['PUT'], serializer_class=UserProfileAvatarSerializer,
+            parser_classes=[parsers.MultiPartParser])
+    def pic(self, request, pk):
+        obj = self.get_object()
+
+        serializer = self.serializer_class(obj.userprofile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status.HTTP_202_ACCEPTED)
+        return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+
