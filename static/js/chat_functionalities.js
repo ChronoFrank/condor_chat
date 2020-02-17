@@ -4,12 +4,28 @@ $(document).ready(function(){
         });
 
         get_available_users();
+        $("#searchbar").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            console.log(value);
+            get_available_users(value);
+
+        });
+
 });
 
-function get_available_users() {
-    $.ajax({
-        url: window.location.protocol+"api/v1/profiles/get_available_users/",
-    }).then(function (data) {
+function get_available_users(params=null) {
+
+    if (params){
+        var args = {
+            url: window.location.protocol+"api/v1/profiles/get_available_users/",
+            data: {full_name: params}
+        }
+    }else{
+        var args = {
+            url: window.location.protocol+"api/v1/profiles/get_available_users/",
+        }
+    }
+    $.ajax(args).then(function (data) {
         let html = '';
         $.each(data, function (index, object) {
             html += '<li><div class="d-flex bd-highlight">' +

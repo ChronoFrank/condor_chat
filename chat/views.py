@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect
 from django.views import View
+from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework import status
@@ -69,5 +70,10 @@ class UserProfileViewset(ModelViewSet):
     @action(detail=False, methods=['GET'])
     def get_available_users(self, request, *args, **kwargs):
         queryset = self.queryset.exclude(id=request.user.id)
+        full_name = self.request.query_params.get('full_name', None)
+        if full_name:
+            queryset = queryset.filter(Q(username__icontains=full_name)
+                                       | Q(first_name__icontains=full_name)
+                                       | Q(last_name__icontains=full_name))
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
