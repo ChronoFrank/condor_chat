@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.conf import settings
 from django.core.files import File
 
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(blank=True)
@@ -25,3 +26,32 @@ def create_user_profile(sender, instance, created, **kwargs):
 def save_user_profile(sender, instance, **kwargs):
     instance.userprofile.save()
 
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, related_name='messages', on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return '{0}-{1}-"{2}"'.format(self.sender.username, self.timestamp, self.content)
+
+
+class Room(models.Model):
+    """
+    A room for people to chat in.
+    """
+    title = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    messages = models.ManyToManyField(Message, blank=True)
+    participants = models.ManyToManyField(User, related_name='rooms', blank=True)
+
+    def __unicode__(self):
+        return '{0}'.format(self.title)
+
+    @property
+    def group_name(self):
+        """
+        Returns the Channels Group name that sockets should subscribe to to get sent
+        messages as they are generated.
+        """
+        return "room-%s" % self.id
