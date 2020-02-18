@@ -13,7 +13,7 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'timestamp')
+    list_display = ('id', 'title', 'timestamp', 'is_goup')
 
 
 admin.site.register(UserProfile, UserProfileAdmin)

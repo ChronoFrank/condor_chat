@@ -13,11 +13,14 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework import parsers
 from .serializers import UserProfileSerializer, UserProfileAvatarSerializer
+from .serializers import MessageSerializer, RoomSerializer
 from .forms import UserProfileForm
+from .models import Message, Room
 
 
 class LoginLanding(View):
@@ -90,10 +93,15 @@ class UserProfileViewset(ModelViewSet):
     def get_available_users(self, request, *args, **kwargs):
         queryset = self.queryset.exclude(id=request.user.id)
         full_name = self.request.query_params.get('full_name', None)
+        email = self.request.query_params.get('email', None)
         if full_name:
             queryset = queryset.filter(Q(username__icontains=full_name)
                                        | Q(first_name__icontains=full_name)
                                        | Q(last_name__icontains=full_name))
+
+        if email:
+            queryset = queryset.filter(email__icontains=email)
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -108,3 +116,76 @@ class UserProfileViewset(ModelViewSet):
             return Response(serializer.data, status.HTTP_202_ACCEPTED)
         return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
 
+
+class MessageViewSet(ModelViewSet):
+    serializer_class = MessageSerializer
+    queryset = Message.objects.all()
+    permission_classes = [IsAuthenticated, ]
+
+
+class RoomViewSet(ModelViewSet):
+    serializer_class = RoomSerializer
+    queryset = Room.objects.all()
+    permission_classes = [IsAuthenticated, ]
+
+
+class SendMessageToUserView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        sender = request.user
+        user_id = request.data.get('user_id')
+        message = request.data.get('message')
+        if not user_id or not message:
+            return Response({'error': "invalid payload to send messages"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if int(user_id) == sender.id:
+            return Response({'error': "the sender and the receiver "
+                                      "can not be the same for new messages"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=int(user_id))
+        except User.DoesNotExist:
+            return Response({'error': "invalid user to chat with"}, status=status.HTTP_400_BAD_REQUEST)
+
+        rooms = Room.objects.filter(participants__in=[sender.id, user.id], is_goup=False).distinct()
+        msg = Message.objects.create(sender=sender, content=message)
+        for room in rooms:
+            ids = list(room.participants.values_list('id', flat=True))
+            if sender.id in ids and user.id in ids:
+                # create new message for the existing 2 people room
+                room.messages.add(msg)
+                serializer = RoomSerializer(instance=room)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        # create new room to send message
+        room_name = u'{0} - {1}'.format(sender.username, user.username)
+        room = Room.objects.create(title=room_name)
+        room.participants.add(sender)
+        room.participants.add(user)
+        room.messages.add(msg)
+        serializer = RoomSerializer(instance=room)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class SendMessageToRoomView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        sender = request.user
+        group_id = request.data.get('group_id')
+        message = request.data.get('message')
+        if not group_id or not message:
+            return Response({'error': "invalid payload to send messages"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            room = Room.objects.get(id=int(group_id), participants__in=[sender.id], is_goup=True)
+        except Room.DoesNotExist:
+            return Response({'error': "the room you are trying to "
+                                      "reaching does not exists or you are not "
+                                      " part of it"}, status=status.HTTP_400_BAD_REQUEST)
+
+        msg = Message.objects.create(sender=sender, content=message)
+        room.messages.add(msg)
+        serializer = RoomSerializer(instance=room)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

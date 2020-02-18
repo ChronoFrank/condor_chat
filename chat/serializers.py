@@ -3,13 +3,13 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
-from .models import UserProfile
+from .models import UserProfile, Message, Room
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
+    first_name = serializers.CharField(write_only=True)
+    last_name = serializers.CharField(write_only=True)
     email = serializers.EmailField(required=True, validators=[UniqueValidator(queryset=User.objects.all())])
     username = serializers.CharField(max_length=32, validators=[UniqueValidator(queryset=User.objects.all())])
     avatar_url = serializers.SerializerMethodField('get_avatar_url', read_only=True)
@@ -45,3 +45,29 @@ class UserProfileAvatarSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ['avatar']
 
+
+class MessageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Message
+        fields = ['sender', 'timestamp', 'content']
+
+
+class RoomSerializer(serializers.ModelSerializer):
+    messages = MessageSerializer(many=True, read_only=True)
+    participants = serializers.PrimaryKeyRelatedField(many=True, write_only=True, queryset=User.objects.all())
+
+    class Meta:
+        model = Room
+        fields = ['title', 'timestamp', 'participants', 'messages']
+
+    def create(self, validated_data):
+        participants = validated_data.pop('participants')
+        room = Room.objects.create(**validated_data)
+        for x in participants:
+            room.participants.add(x)
+
+        if len(participants) > 2:
+            room.is_goup = True
+            room.save()
+        return room

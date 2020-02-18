@@ -32,7 +32,7 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return '{0}-{1}-"{2}"'.format(self.sender.username, self.timestamp, self.content)
 
 
@@ -44,8 +44,9 @@ class Room(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     messages = models.ManyToManyField(Message, blank=True)
     participants = models.ManyToManyField(User, related_name='rooms', blank=True)
+    is_goup = models.BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return '{0}'.format(self.title)
 
     @property
@@ -55,3 +56,17 @@ class Room(models.Model):
         messages as they are generated.
         """
         return "room-%s" % self.id
+
+
+@receiver(post_save, sender=Room)
+def post_create_room(sender, instance, **kwargs):
+    if instance.participants and instance.participants.count() > 2:
+        is_group = True
+
+    else:
+        is_group = False
+
+    room = Room.objects.filter(id=instance.id)
+    room.update(is_goup=is_group)
+
+
