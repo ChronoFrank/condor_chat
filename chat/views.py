@@ -109,12 +109,15 @@ class UserProfileViewset(ModelViewSet):
             parser_classes=[parsers.MultiPartParser])
     def pic(self, request, pk):
         obj = self.get_object()
-
-        serializer = self.serializer_class(obj.userprofile, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status.HTTP_202_ACCEPTED)
-        return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+        if request.user == obj or request.user.is_superuser:
+            serializer = self.serializer_class(obj.userprofile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status.HTTP_202_ACCEPTED)
+            else:
+                Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'invalid user to update'}, status.HTTP_400_BAD_REQUEST)
 
 
 class MessageViewSet(ModelViewSet):

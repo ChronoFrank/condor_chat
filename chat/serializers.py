@@ -54,12 +54,13 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class RoomSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     messages = MessageSerializer(many=True, read_only=True)
     participants = serializers.PrimaryKeyRelatedField(many=True, write_only=True, queryset=User.objects.all())
 
     class Meta:
         model = Room
-        fields = ['title', 'timestamp', 'participants', 'messages']
+        fields = ['id', 'title', 'timestamp', 'participants', 'messages']
 
     def create(self, validated_data):
         participants = validated_data.pop('participants')
